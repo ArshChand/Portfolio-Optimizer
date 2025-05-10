@@ -1,0 +1,13 @@
+# Ignore virtual environment
+newenv/
+
+# Ignore submissions folder
+Submissions/
+
+# Ignore specific files
+bhavya.ipynb
+bhavya.py
+
+# Ignore all .txt and .pdf files
+*.txt
+*.pdf
