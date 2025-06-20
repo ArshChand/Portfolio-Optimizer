@@ -6,13 +6,6 @@ import seaborn as sns
 from datetime import datetime
 import cvxpy as cp
 import time
-import plotly.graph_objects as go
-import plotly.express as px
-import dash
-from dash import html, dcc
-import plotly.io as pio
-
-pio.renderers.default = "browser"
 
 
 # Aggressive and Defensive portfolios
@@ -203,67 +196,40 @@ for key, value in combined_metrics.items():
 
 #plot results
 
-def plot_results_interactive_combined(
-    agg_results, agg_best_index, agg_tickers, agg_portfolio_value, agg_weights,
-    def_results, def_best_index, def_tickers, def_portfolio_value, def_weights
-):
-    total_value = agg_portfolio_value + def_portfolio_value
-    total_weights = np.concatenate([agg_weights * 0.08, def_weights * 0.92])
-    total_tickers = agg_tickers + def_tickers
+# 1. Pie Chart
+plt.figure(figsize=(6, 6))
+final_weights = np.array(combined_weights)
+labels = [t for t, w in zip(combined_tickers, final_weights) if w > 0.02]
+sizes = [w for w in final_weights if w > 0.02]
+plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
+plt.title("Combined Portfolio Allocation")
+plt.axis('equal')
+plt.tight_layout()
+plt.show()
 
-    # --- Pie Chart ---
-    min_allocation_threshold = 0.02
-    rounded_weights = np.round(total_weights, 4)
+# 2. Portfolio Value Over Time
+plt.figure(figsize=(12, 6))
+plt.plot(combined_value.index, combined_value.values, label='Combined Portfolio', color='blue')
+plt.plot(agg_value.index, agg_value.values, label='Aggressive', linestyle='--', color='red')
+plt.plot(def_value.index, def_value.values, label='Defensive', linestyle='--', color='green')
+plt.title("Portfolio Performance Over Time")
+plt.xlabel("Date")
+plt.ylabel("Portfolio Value (₹)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
-    filtered = [(t, w) for t, w in zip(total_tickers, rounded_weights) if w > min_allocation_threshold]
-    if filtered:
-        new_tickers, new_weights = zip(*filtered)
-    else:
-        new_tickers, new_weights = [], []
+# 3. Bar Chart for Allocations
+alloc_inr = np.array(combined_weights) * 100000
+tickers_inr = [t for t, w in zip(combined_tickers, alloc_inr) if w > 100]
+allocs = [w for w in alloc_inr if w > 100]
 
-    sorted_allocation = sorted(zip(new_tickers, new_weights), key=lambda x: x[1], reverse=True)
-    new_tickers, new_weights = zip(*sorted_allocation)
-
-    fig = go.Figure(data=[go.Pie(labels=new_tickers, values=new_weights, hole=0.3)])
-    fig.update_layout(title="Combined Portfolio Allocation", template="plotly_dark")
-    fig.show()
-
-    # --- Value Over Time Chart ---
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=total_value.index, y=total_value.values, mode='lines', name='Total Portfolio', line=dict(color='yellow')))
-    fig.add_trace(go.Scatter(x=agg_portfolio_value.index, y=agg_portfolio_value.values, mode='lines', name='Aggressive', line=dict(color='red')))
-    fig.add_trace(go.Scatter(x=def_portfolio_value.index, y=def_portfolio_value.values, mode='lines', name='Defensive', line=dict(color='green')))
-
-    fig.update_layout(
-        title="Portfolio Performance (Apr 2022 - Mar 2025)",
-        xaxis_title="Date",
-        yaxis_title="Value (INR)",
-        template="plotly_dark"
-    )
-    fig.show()
-
-    # --- Bar Chart with Optimization ---
-    assert len(total_weights) == len(total_tickers), "Mismatch in weights and tickers"
-
-    allocation_inr = pd.Series(total_weights * 100000, index=total_tickers)
-    allocation_df = allocation_inr.reset_index()
-    allocation_df.columns = ['Ticker', 'Allocation (INR)']
-
-    allocation_df = allocation_df[allocation_df["Allocation (INR)"] > 100]  # Filter low weights
-    allocation_df = allocation_df.sort_values("Allocation (INR)", ascending=False)
-
-    fig = px.bar(allocation_df,
-                 x='Ticker', y='Allocation (INR)',
-                 title="Combined Portfolio Allocation (₹100,000)",
-                 template='plotly_dark')
-
-    fig.update_traces(texttemplate='', textposition='none')  
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    fig.show()
-
-
-plot_results_interactive_combined(
-    agg_results, agg_best_index, aggressive_tickers, agg_value, agg_weights,
-    def_results, def_best_index, defensive_tickers, def_value, def_weights
-)
-
+plt.figure(figsize=(12, 6))
+plt.bar(tickers_inr, allocs, color='teal')
+plt.title("Allocation by Asset (INR)")
+plt.xlabel("Ticker")
+plt.ylabel("Amount Invested (₹)")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
